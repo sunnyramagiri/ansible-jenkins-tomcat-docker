@@ -1,0 +1,72 @@
+---
+- name: install tomcat and jenkins
+  hosts: node1
+  tasks:
+    - name: install java
+      apt:
+        name: openjdk-17-jdk
+        state: present
+        update_cache: yes
+
+    - name: add jenkins repo
+      get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /usr/share/keyrings/jenkins-keyring.asc
+
+    - name: ad jenkins apt repo
+      apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins.io/debian-stable binary/"
+        state: present
+        filename: jenkins
+
+  
+    - name: install jenkins
+      apt:
+        name: jenkins
+        state: present
+
+    - name: enable and start jenkins
+      systemd:
+        name: jenkins
+        enabled: yes
+        state: started
+
+    - name: create a tomcat directory
+      file:
+        path: /opt/tomcat
+        state: directory
+        mode: '0777'
+
+    - name: install tomcat 
+      get_url:
+        url: https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.104/bin/apache-tomcat-9.0.104.tar.gz
+        dest: /tmp/apache-tomcat-9.0.104.tar.gz
+
+    - name: extract the tomcat 
+      unarchive:
+        src: /tmp/apache-tomcat-9.0.104.tar.gz
+        dest: /opt/tomcat
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: manke start.sh
+      file:
+        path: /opt/tomcat/bin/startup.sh
+        mode: '0777'
+
+    - name: start tomcat
+      file:
+        path: /opt/tomcat/bin/startup.sh
+        mode: '0777' 
+
+    - name: change the HTTP to 9070
+      replace:
+        path: /opt/tomcat/conf/server.xml
+        regexp: 'port="8080"'
+        replace: 'port="9070"'
+
+
+
+    - name: Restart Tomcat
+      shell: /opt/tomcat/bin/shutdown.sh && /opt/tomcat/bin/startup.sh
+
